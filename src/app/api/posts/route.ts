@@ -4,7 +4,6 @@ import jwt from 'jsonwebtoken';
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8';
 
-// --- 类型与常量定义 ---
 const contractABI = ["function mintPost(address author, string memory ipfsCid) public returns (uint256)"];
 interface Env {
   DB: D1Database;
@@ -13,12 +12,10 @@ interface Env {
   JWT_SECRET: string;
   ENCRYPTION_SECRET: string;
 }
-interface NextContext { env: Env; }
 interface AuthPayload { phoneNumber: string; walletAddress: string; }
 type PostBody = { type: 'web2' | 'web3'; content: string; };
 export const runtime = 'edge';
 
-// --- 认证中间件函数 ---
 async function verifyAuth(request: NextRequest, env: Env): Promise<AuthPayload | null> {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -28,16 +25,12 @@ async function verifyAuth(request: NextRequest, env: Env): Promise<AuthPayload |
   } catch (error) { return null; }
 }
 
-// --- GET 请求 (公开) ---
-export async function GET(request: NextRequest, context: { env: Env }) {
+export async function GET(request: NextRequest) {
   try {
-    const { env } = context;
-
-    // 防御性检查
+    const { env } = request as unknown as { env: Env };
     if (!env || !env.DB) {
       throw new Error("服务器配置错误：D1数据库绑定缺失");
     }
-
     const ps = env.DB.prepare('SELECT id, author_address, content, post_type, tx_hash, created_at FROM posts ORDER BY created_at DESC');
     const { results } = await ps.all();
     return NextResponse.json({ posts: results });
@@ -48,29 +41,22 @@ export async function GET(request: NextRequest, context: { env: Env }) {
   }
 }
 
-// --- POST 请求 (需要认证) ---
-export async function POST(request: NextRequest, context: { env: Env }) {
+export async function POST(request: NextRequest) {
   try {
-    const { env } = context;
-
-    // 防御性检查
+    const { env } = request as unknown as { env: Env };
     if (!env.DB || !env.JWT_SECRET || !env.ENCRYPTION_SECRET || !env.RPC_URL || !env.CONTRACT_ADDRESS) {
       throw new Error("服务器配置错误：环境变量或绑定缺失");
     }
-
     const userInfo = await verifyAuth(request, env);
     if (!userInfo) {
       return NextResponse.json({ error: '未经授权的访问，请先登录' }, { status: 401 });
     }
-
     const body = await request.json() as PostBody;
-
     if (body.type === 'web2') {
       const ps = env.DB.prepare('INSERT INTO posts (author_address, content, post_type) VALUES (?, ?, ?)');
       await ps.bind(userInfo.walletAddress, body.content, 'web2').run();
       return NextResponse.json({ message: '帖子创建成功' }, { status: 201 });
     }
-
     if (body.type === 'web3') {
       const user = await env.DB.prepare('SELECT encrypted_private_key FROM users WHERE phone_number = ?').bind(userInfo.phoneNumber).first<{encrypted_private_key: string}>();
       if (!user) throw new Error("用户数据异常，请重新登录");
@@ -96,7 +82,6 @@ export async function POST(request: NextRequest, context: { env: Env }) {
       
       return NextResponse.json({ message: '上链成功！', txHash: receipt.transactionHash }, { status: 201 });
     }
-    
     return NextResponse.json({ error: '无效的帖子类型' }, { status: 400 });
   } catch (e: unknown) {
     const error = e instanceof Error ? e.message : 'An unknown error occurred';

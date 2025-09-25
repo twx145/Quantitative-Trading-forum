@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "ethers": "^6.15.0",
     "next": "15.5.4",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "sm-crypto": "^0.3.13"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250924.0",

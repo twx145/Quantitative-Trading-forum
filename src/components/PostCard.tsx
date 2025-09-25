@@ -1,5 +1,4 @@
-// 文件路径: src/components/PostCard.tsx
-import { FileText, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 interface Post {
   id: number;
@@ -13,10 +12,10 @@ interface Post {
 export default function PostCard({ post }: { post: Post }) {
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 transition-all hover:border-cyan-600/50">
-      <p className="text-gray-300 break-words mb-4">{post.content}</p>
+      <p className="text-gray-300 break-words mb-4 whitespace-pre-wrap">{post.content}</p>
       <div className="border-t border-gray-700 pt-3 flex justify-between items-center text-xs text-gray-400">
-        <div className='font-mono'>
-          <p>作者: {post.author_address}</p>
+        <div className='font-mono' title={post.author_address}>
+          <p>作者: {`${post.author_address.substring(0, 10)}...`}</p>
           <p>时间: {new Date(post.created_at).toLocaleString()}</p>
         </div>
         {post.post_type === 'web3' && (

@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@types/crypto-js": "^4.2.2",
     "bcrypt-ts": "^7.1.0",
     "crypto-js": "^4.2.0",
     "ethers": "^6.15.0",
@@ -25,6 +24,8 @@
     "@cloudflare/workers-types": "^4.20250924.0",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/crypto-js": "^4.2.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -1,6 +1,4 @@
-// 文件路径: src/app/page.tsx (已修复最后的类型错误)
 "use client";
-
 import { useState, useEffect, useCallback } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import PostForm from '@/components/PostForm';
@@ -8,22 +6,11 @@ import PostCard from '@/components/PostCard';
 import AuthModal from '@/components/AuthModal';
 import { Loader2, LogOut } from 'lucide-react';
 
-// --- 类型定义区 ---
-interface Post {
-  id: number;
-  author_address: string;
-  content: string;
-  post_type: 'web2' | 'web3';
-  tx_hash: string | null;
-  created_at: string;
-}
+interface Post { id: number; author_address: string; content: string; post_type: 'web2' | 'web3'; tx_hash: string | null; created_at: string; }
 interface User { phoneNumber: string; walletAddress: string; }
-interface ApiSuccessResponse { posts: Post[]; }
-// 新增：为所有API的错误响应定义一个统一的类型
+interface ApiPostSuccessResponse { posts: Post[]; }
 interface ApiErrorResponse { error: string; }
 
-
-// --- 主页组件 ---
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -34,16 +21,12 @@ export default function Home() {
     setIsLoading(true);
     try {
       const response = await fetch('/api/posts');
-      
       if (!response.ok) {
-        // 核心修复点：在这里为错误响应明确指定类型
-        const err = await response.json() as ApiErrorResponse; 
+        const err = await response.json() as ApiErrorResponse;
         throw new Error(err.error || "获取帖子失败");
       }
-
-      const data: ApiSuccessResponse = await response.json();
+      const data: ApiPostSuccessResponse = await response.json();
       setPosts(data.posts || []);
-
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "获取帖子失败";
       console.error("获取帖子失败:", errorMessage);
@@ -57,11 +40,7 @@ export default function Home() {
     const token = localStorage.getItem('jwt_token');
     const userData = localStorage.getItem('user_data');
     if (token && userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (e) {
-        localStorage.clear();
-      }
+      try { setUser(JSON.parse(userData)); } catch (e) { localStorage.clear(); }
     }
     fetchPosts();
   }, [fetchPosts]);
@@ -75,12 +54,8 @@ export default function Home() {
 
   return (
     <>
-      <Toaster position="top-center" reverseOrder={false} toastOptions={{
-        style: { background: '#333', color: '#fff' },
-      }}/>
-      
+      <Toaster position="top-center" reverseOrder={false} toastOptions={{ style: { background: '#333', color: '#fff' } }}/>
       {isAuthModalOpen && <AuthModal setUser={setUser} closeModal={() => setIsAuthModalOpen(false)} />}
-      
       <div className="container mx-auto max-w-3xl p-4 md:p-8 text-white min-h-screen">
         <header className="flex justify-between items-center mb-10">
           <div>
@@ -96,12 +71,9 @@ export default function Home() {
               <button onClick={handleLogout} className="p-2 bg-gray-800 hover:bg-gray-700 rounded-full transition" title="退出登录"><LogOut className='w-5 h-5'/></button>
             </div>
           ) : (
-            <button onClick={() => setIsAuthModalOpen(true)} className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">
-              注册 / 登录
-            </button>
+            <button onClick={() => setIsAuthModalOpen(true)} className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg">注册 / 登录</button>
           )}
         </header>
-
         <main>
           {user && <PostForm user={user} refreshPosts={fetchPosts} />}
           {!user && (
@@ -109,20 +81,15 @@ export default function Home() {
                <p className="text-gray-400">请<button onClick={() => setIsAuthModalOpen(true)} className="text-cyan-400 underline mx-1 font-semibold">登录或注册</button>后分享您的研究成果。</p>
              </div>
           )}
-          
           <div className="mt-10">
             <h3 className="text-2xl font-semibold mb-6 border-l-4 border-cyan-500 pl-4">社区最新研究</h3>
             <div className="space-y-6">
               {isLoading ? (
-                 <div className="flex justify-center items-center py-10">
-                   <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
-                 </div>
+                 <div className="flex justify-center items-center py-10"><Loader2 className="w-8 h-8 animate-spin text-cyan-500" /></div>
               ) : posts.length > 0 ? (
                 posts.map((post) => <PostCard key={post.id} post={post} />)
               ) : (
-                <div className="text-center py-10 text-gray-500">
-                  <p>社区还没有任何研究成果。</p>
-                </div>
+                <div className="text-center py-10 text-gray-500"><p>社区还没有任何研究成果。</p></div>
               )}
             </div>
           </div>

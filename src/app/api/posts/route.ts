@@ -1,103 +1,84 @@
-// 文件路径: src/app/api/posts/route.ts
-
+// 文件路径: src/app/api/posts/route.ts (已重构)
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 
-// 这是您合约的“说明书”（ABI），后端需要它来理解如何调用合约里的函数。
-// 我们只包含了需要用到的部分，以保持代码整洁。
+// --- 类型定义区 ---
 const contractABI = [
   "event PostMinted(uint256 indexed tokenId, address indexed author, string ipfsCid)",
   "function mintPost(address author, string memory ipfsCid) public returns (uint256)"
 ];
-
-// 定义Cloudflare将会注入的环境变量的类型，让代码更安全、更智能。
 interface Env {
   DB: D1Database;
   PRIVATE_KEY: string;
   RPC_URL: string;
   CONTRACT_ADDRESS: string;
 }
-
-// 定义前端可能发送过来的两种请求的数据结构
-interface Web3PostBody {
-  type: 'web3';
+type PostBody = {
+  type: 'web2' | 'web3';
   author_address: string;
   content: string;
-}
+};
 
-interface Web2PostBody {
-  type: 'web2';
-  author_address: string;
-  content: string;
-}
-
-// 两种请求的联合类型
-type PostBody = Web3PostBody | Web2PostBody;
-
-// 声明此函数在Cloudflare的Edge运行时执行，这是必须的。
 export const runtime = 'edge';
 
-// 处理GET请求，用于获取所有帖子，此部分逻辑与之前基本一致。
+// --- GET 请求 ---
 export async function GET(request: NextRequest) {
   try {
     const { env } = request as unknown as { env: Env };
-    const ps = env.DB.prepare('SELECT id, author_address, content, post_type, tx_hash, created_at FROM posts ORDER BY created_at DESC');
+    const ps = env.DB.prepare('SELECT * FROM posts ORDER BY created_at DESC');
     const { results } = await ps.all();
     return NextResponse.json({ posts: results });
-  } catch (e) {
-    const error = e as Error;
+  } catch (e: unknown) {
+    const error = e instanceof Error ? e : { message: 'An unknown error occurred' };
     console.error({ error: error.message });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// 处理POST请求，这是本次改造的核心，包含了与联盟链交互的逻辑。
+// --- POST 请求 ---
 export async function POST(request: NextRequest) {
   try {
     const { env } = request as unknown as { env: Env };
     const body = await request.json() as PostBody;
 
-    // 1. 初始化与联盟链的连接
-    //    - JsonRpcProvider: 使用BSN提供的网关地址创建一个连接通道。
-    //    - Wallet: 使用您的后端私钥创建一个“签名者”实例，它就是能操作合约的“手”。
-    //    - Contract: 将合约地址、说明书(ABI)和签名者组合起来，创建一个可交互的合约对象。
-    const provider = new ethers.JsonRpcProvider(env.RPC_URL);
-    const signer = new ethers.Wallet(env.PRIVATE_KEY, provider);
-    const contract = new ethers.Contract(env.CONTRACT_ADDRESS, contractABI, signer);
-
-    // 2. 根据前端请求的类型，执行不同操作
-    if (body.type === 'web3') {
-      const { author_address, content } = body;
-      
-      // 3. 后端代替用户铸造NFT
-      //    注意：mintPost的第一个参数是用户的钱包地址，但这个交易是由我们后端的signer账户支付和签名的。
-      const ipfsCid = `mock-ipfs-cid-for-demo-${Date.now()}`;
-      const transaction = await contract.mintPost(author_address, ipfsCid);
-      
-      //    等待交易在链上被确认
-      const receipt = await transaction.wait();
-
-      // 4. 将链上成功的证据（如交易哈希）存入我们的D1数据库作为缓存
-      const ps = env.DB.prepare(
-        'INSERT INTO posts (author_address, content, post_type, ipfs_cid, tx_hash) VALUES (?, ?, ?, ?, ?)'
-      );
-      await ps.bind(author_address, content, 'web3', ipfsCid, receipt.transactionHash).run();
-      
-      return NextResponse.json({ message: '帖子已成功上链并缓存！', txHash: receipt.transactionHash });
-
-    } else {
-      // Web2的普通发帖逻辑保持不变
-      const { author_address, content } = body;
+    // --- Web2 普通发帖逻辑 (已修复) ---
+    if (body.type === 'web2') {
       const ps = env.DB.prepare(
         'INSERT INTO posts (author_address, content, post_type) VALUES (?, ?, ?)'
       );
-      await ps.bind(author_address, content, 'web2').run();
-      return NextResponse.json({ message: '帖子创建成功' });
+      await ps.bind(body.author_address, body.content, 'web2').run();
+      return NextResponse.json({ message: '帖子创建成功' }, { status: 201 });
     }
-  } catch (e) {
-    const error = e as Error;
+
+    // --- Web3 上链存证逻辑 ---
+    if (body.type === 'web3') {
+      // 1. 初始化与联盟链的连接
+      const provider = new ethers.JsonRpcProvider(env.RPC_URL);
+      const signer = new ethers.Wallet(env.PRIVATE_KEY, provider);
+      const contract = new ethers.Contract(env.CONTRACT_ADDRESS, contractABI, signer);
+      
+      // 2. 去中心化存储（当前为模拟）
+      const ipfsCid = `decentralized-storage-cid-for-${body.content.slice(0, 10)}-${Date.now()}`;
+      
+      // 3. 后端代替用户铸造NFT
+      const transaction = await contract.mintPost(body.author_address, ipfsCid);
+      const receipt = await transaction.wait();
+
+      // 4. 将链上证据存入D1数据库
+      const ps = env.DB.prepare(
+        'INSERT INTO posts (author_address, content, post_type, ipfs_cid, tx_hash) VALUES (?, ?, ?, ?, ?)'
+      );
+      await ps.bind(body.author_address, body.content, 'web3', ipfsCid, receipt.transactionHash).run();
+      
+      return NextResponse.json({ message: '帖子已成功上链并缓存！', txHash: receipt.transactionHash }, { status: 201 });
+    }
+
+    // 如果类型不匹配，返回错误
+    return NextResponse.json({ error: '无效的帖子类型' }, { status: 400 });
+
+  } catch (e: unknown) {
+    const error = e instanceof Error ? e : { message: 'An unknown error occurred' };
     console.error({ error: error.message });
-    // 如果上链失败，向前台返回具体的错误信息
     return NextResponse.json({ error: '联盟链交易失败: ' + error.message }, { status: 500 });
   }
 }

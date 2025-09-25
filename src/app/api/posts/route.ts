@@ -1,3 +1,5 @@
+// --- CACHE BUSTING v1 --- 强制刷新构建缓存
+
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 import jwt from 'jsonwebtoken';

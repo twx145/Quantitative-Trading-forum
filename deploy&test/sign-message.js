@@ -2,7 +2,7 @@ const { ethers } = require('ethers');
 
 // --- 请在这里修改 ---
 // 1. 替换成你从BSN下载的私钥 (务必以 '0x' 开头)
-const privateKey = '0x364b1197809c4fe4f1a152c849cb6a9f2323f4eb90c856a2be4fb76d8ec8b060';
+const privateKey = '';
 
 // 2. 替换成BSN页面上“输入测试数据”框里的内容
 const message = '1';

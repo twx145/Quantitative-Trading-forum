@@ -8,7 +8,7 @@ const { sm2 } = require('sm-crypto');
 // 1. 替换成您从BSN下载或生成的私钥。
 //    重要：必须是64位的十六进制字符串，并且不要带 '0x' 前缀！
 //    如果您的私钥带有 '0x'，请手动删除它。
-const privateKey = '364b1197809c4fe4f1a152c849cb6a9f2323f4eb90c856a2be4fb76d8ec8b060';
+const privateKey = '';
 
 // 2. 替换成BSN页面上“输入测试数据”框里的完整内容。
 const messageToSign = '1';

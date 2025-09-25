@@ -7,14 +7,14 @@ const ethers = require("ethers");
 // ====================================================================================
 
 // 从BSN服务概览页面获取的 “节点网关地址” (以 /evmrpc 结尾)
-const RPC_URL = "https://opbningxia.bsngate.com:18602/api/0d74beb272d04b46aa9b628cabe9ba46/evmrpc";
+const RPC_URL = "";
 
 // 从BSN“链上账户管理”创建的后端签名账户的 “私钥”
-const PRIVATE_KEY = "f94351a600e85c3fb668253d4f8dfc9135d8cc02833ae722a0f3bdeb74f3a13b";
+const PRIVATE_KEY = "";
 
 // ★★★ 新增 ★★★
 // 从BSN“项目管理”页面获取的 “项目Key”
-const PROJECT_KEY = "17c78f7bf2214f27be512f14414594e4"; 
+const PROJECT_KEY = ""; 
 
 // 从Remix编译后复制的合约ABI和Bytecode (请使用 TestDeploy.sol 的内容先进行测试)
 const contractABI = [[

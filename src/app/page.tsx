@@ -1,4 +1,4 @@
-// 文件路径: src/app/page.tsx (已修复)
+// 文件路径: src/app/page.tsx (已修复最后的类型错误)
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -19,6 +19,8 @@ interface Post {
 }
 interface User { phoneNumber: string; walletAddress: string; }
 interface ApiSuccessResponse { posts: Post[]; }
+// 新增：为所有API的错误响应定义一个统一的类型
+interface ApiErrorResponse { error: string; }
 
 
 // --- 主页组件 ---
@@ -32,11 +34,20 @@ export default function Home() {
     setIsLoading(true);
     try {
       const response = await fetch('/api/posts');
+      
+      if (!response.ok) {
+        // 核心修复点：在这里为错误响应明确指定类型
+        const err = await response.json() as ApiErrorResponse; 
+        throw new Error(err.error || "获取帖子失败");
+      }
+
       const data: ApiSuccessResponse = await response.json();
       setPosts(data.posts || []);
-    } catch (err) {
-      console.error("获取帖子失败:", err);
-      toast.error("无法加载帖子列表");
+
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "获取帖子失败";
+      console.error("获取帖子失败:", errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -49,7 +60,6 @@ export default function Home() {
       try {
         setUser(JSON.parse(userData));
       } catch (e) {
-        // 如果本地数据格式错误，则清除
         localStorage.clear();
       }
     }
@@ -69,7 +79,6 @@ export default function Home() {
         style: { background: '#333', color: '#fff' },
       }}/>
       
-      {/* 关键修复点：确保AuthModal在主逻辑之外，避免嵌套 */}
       {isAuthModalOpen && <AuthModal setUser={setUser} closeModal={() => setIsAuthModalOpen(false)} />}
       
       <div className="container mx-auto max-w-3xl p-4 md:p-8 text-white min-h-screen">
@@ -94,10 +103,11 @@ export default function Home() {
         </header>
 
         <main>
-          {user ? <PostForm user={user} refreshPosts={fetchPosts} /> : (
-            <div className="text-center py-10 bg-gray-800 rounded-lg">
-              <p className="text-gray-400">请<button onClick={() => setIsAuthModalOpen(true)} className="text-cyan-400 underline mx-1 font-semibold">登录或注册</button>后分享您的研究成果。</p>
-            </div>
+          {user && <PostForm user={user} refreshPosts={fetchPosts} />}
+          {!user && (
+             <div className="text-center py-10 bg-gray-800 rounded-lg">
+               <p className="text-gray-400">请<button onClick={() => setIsAuthModalOpen(true)} className="text-cyan-400 underline mx-1 font-semibold">登录或注册</button>后分享您的研究成果。</p>
+             </div>
           )}
           
           <div className="mt-10">

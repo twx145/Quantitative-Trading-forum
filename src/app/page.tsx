@@ -1,13 +1,13 @@
-// 文件路径: src/app/page.tsx (已修复TypeScript类型错误)
+// 文件路径: src/app/page.tsx (已修复所有ESLint错误和警告)
 
 "use client";
 
 import { useState, useEffect, FormEvent } from 'react';
-import { BrowserProvider } from 'ethers';
+// 已修复：我们将完整导入 'ethers' 以便使用它的类型
+import { ethers } from 'ethers'; 
 
-// ------------------- 类型定义区 (开始) -------------------
+// --- 类型定义区 (开始) ---
 
-// 帖子的数据结构定义 (保持不变)
 interface Post {
   id: number;
   author_address: string;
@@ -17,27 +17,25 @@ interface Post {
   created_at: string;
 }
 
-// 新增：定义API成功返回的数据结构
-// 我们告诉TS，成功的响应体里会有一个posts字段，它是一个Post数组
 interface ApiSuccessResponse {
   posts: Post[];
 }
 
-// 新增：定义API失败返回的数据结构
-// 我们告诉TS，失败的响应体里会有一个error字段，它是一个字符串
 interface ApiErrorResponse {
   error: string;
 }
 
-// ------------------- 类型定义区 (结束) -------------------
+// --- 类型定义区 (结束) ---
 
 declare global {
   interface Window {
-    ethereum: any;
+    // 已修复(Error): 不再使用 any，而是使用 ethers 提供的标准 EIP-1193 提供者类型
+    ethereum: ethers.Eip1193Provider;
   }
 }
 
 export default function Home() {
+  // 已修复(Warning): 'setAccount' 现在在 connectWallet 中被使用了
   const [account, setAccount] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [content, setContent] = useState('');
@@ -46,21 +44,30 @@ export default function Home() {
   const [error, setError] = useState('');
   const [isMintMode, setIsMintMode] = useState(false);
 
-  // 连接钱包的功能 (无变化)
-  const connectWallet = async () => { /* ... */ };
+  // 已修复(Warning): 'BrowserProvider' 现在被使用了
+  const connectWallet = async () => {
+    if (typeof window.ethereum === 'undefined') {
+      return setError("请安装MetaMask钱包插件！");
+    }
+    try {
+      // ethers.BrowserProvider 替代了旧的 new ethers.providers.Web3Provider
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await provider.send("eth_requestAccounts", []);
+      setAccount(accounts[0]);
+    } catch (err) {
+      setError("连接钱包失败，请重试。");
+    }
+  };
 
-  // 从后端获取帖子列表 (有改动)
   const fetchPosts = async () => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/posts');
-      
-      // 已修复：使用类型断言 `as ApiSuccessResponse` 告诉TS data 的具体类型
-      // 现在TS知道了 data.posts 是存在的，并且是一个Post数组
       const data = await response.json() as ApiSuccessResponse;
-      
       setPosts(data.posts || []);
-    } catch (err) {
+    } catch (err: unknown) { // 已修复(Warning): 'err' 被使用了
+      // 即使我们不直接用err，好的实践是至少在控制台打印出来
+      console.error("Fetch posts failed:", err);
       setError('无法从后端加载帖子列表。');
     } finally {
       setIsLoading(false);
@@ -71,7 +78,6 @@ export default function Home() {
     fetchPosts();
   }, []);
 
-  // 提交表单 (有改动)
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!content || !account) { return; }
@@ -91,15 +97,19 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        // 已修复：使用类型断言 `as ApiErrorResponse` 告诉TS errData 的具体类型
-        // 现在TS知道了 errData.error 是存在的，并且是一个字符串
         const errData = await response.json() as ApiErrorResponse;
         throw new Error(errData.error || '提交帖子失败');
       }
-
-    } catch (err: any) {
-      // 现在err.message里会包含后端传来的具体错误信息
-      setError(err.message);
+      
+    // 已修复(Error): 不再使用 any，而是使用更安全的 unknown 类型，并进行类型检查
+    } catch (err: unknown) { 
+      if (err instanceof Error) {
+        // 现在可以安全地访问 err.message
+        setError(err.message);
+      } else {
+        // 处理未知类型的错误
+        setError('发生了一个未知错误');
+      }
     } finally {
       setContent('');
       setIsSubmitting(false);

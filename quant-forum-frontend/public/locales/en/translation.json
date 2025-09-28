@@ -1,0 +1,34 @@
+{
+  "navbar": {
+    "brand": "QuantForum",
+    "about": "About Us",
+    "my": "My",
+    "settings": "Settings",
+    "logout": "Logout",
+    "login": "Login / Register"
+  },
+  "settings": {
+    "title": "Settings",
+    "language_label": "Language",
+    "language_desc": "This feature is in development.",
+    "fontsize_label": "Font Size",
+    "theme_label": "Theme",
+    "themes": {
+      "stars": "Stars",
+      "dark": "Dark",
+      "light": "Light"
+    },
+    "fonts": {
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large"
+    }
+  },
+  "post_form": {
+    "placeholder": "Share your insights, discuss quant strategies...",
+    "nft_checkbox": "Mint as a Digital Collectible (NFT)",
+    "nft_tooltip": "Wallet generation required",
+    "submit_button": "Post",
+    "submitting_button": "Posting..."
+  }
+}

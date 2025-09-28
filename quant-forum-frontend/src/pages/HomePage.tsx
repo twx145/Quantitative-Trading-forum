@@ -3,19 +3,13 @@ import PostForm from '../components/PostForm';
 import PostCard from '../components/PostCard';
 import Spinner from '../components/Spinner';
 
-// Define the types again for this component's props
-interface User {
-  id: number;
-  public_address: string | null;
-}
-interface Post {
-  id: number; content: string; created_at: string; author_phone: string;
-  is_nft: number; ipfs_cid: string | null; transaction_hash: string | null;
-}
+// 1. 从我们的新文件中导入统一的类型
+import { type User, type Post } from '../types';
 
+// 2. 更新 HomePageProps 的定义
 interface HomePageProps {
   user: User | null;
-  posts: Post[];
+  posts: Post[]; // 现在它使用的是正确的 Post 类型
   isLoading: boolean;
   handlePostSubmit: (content: string, isNft: boolean) => Promise<void>;
 }
@@ -35,6 +29,7 @@ const HomePage: React.FC<HomePageProps> = ({ user, posts, isLoading, handlePostS
           <Spinner />
         </div>
       ) : (
+        // 这里的 posts.map 不会再报错，因为类型现在完全一致
         posts.map(post => <PostCard key={post.id} post={post} />)
       )}
     </>

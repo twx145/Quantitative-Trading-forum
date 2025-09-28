@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ethers } from 'ethers';
+import { encrypt, hashText } from './crypto'; 
 
 // 你的智能合约ABI
 const contractABI =  [
@@ -571,8 +572,8 @@ export interface Env {
 	DB: D1Database;
 	RPC_URL: string;
 	CONTRACT_ADDRESS: string;
-	// --- Secrets ---
 	GAS_PAYER_PRIVATE_KEY: string;
+	ENCRYPTION_KEY: string; // 新增
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -584,32 +585,39 @@ app.post('/api/register', async (c) => {
 	if (!phone) return c.json({ success: false, error: '手机号是必须的' }, 400);
 
 	try {
-		const existingUser = await c.env.DB.prepare('SELECT id FROM Users WHERE phone_number = ?').bind(phone).first();
+        const phoneHash = await hashText(phone); // 1. 计算手机号哈希
+
+		const existingUser = await c.env.DB.prepare('SELECT id FROM Users WHERE phone_hash = ?').bind(phoneHash).first();
 		if (existingUser) {
 			return c.json({ success: false, error: '该手机号已被注册' }, 409);
 		}
 
-		await c.env.DB.prepare('INSERT INTO Users (phone_number) VALUES (?)').bind(phone).run();
-		const user = await c.env.DB.prepare('SELECT id, public_address FROM Users WHERE phone_number = ?').bind(phone).first();
+        const encryptedPhone = await encrypt(phone, c.env); // 2. 加密手机号
 
+		await c.env.DB.prepare(
+            'INSERT INTO Users (phone_hash, encrypted_phone_number) VALUES (?, ?)'
+        ).bind(phoneHash, encryptedPhone).run(); // 3. 存储哈希和加密值
+
+		const user = await c.env.DB.prepare('SELECT id, public_address FROM Users WHERE phone_hash = ?').bind(phoneHash).first();
 		return c.json({ success: true, user });
-	} catch (e: any) {
-		return c.json({ success: false, error: e.message }, 500);
-	}
+
+	} catch (e: any) { return c.json({ success: false, error: e.message }, 500); }
 });
 
 app.post('/api/login', async (c) => {
 	const { phone } = await c.req.json();
 	if (!phone) return c.json({ success: false, error: '手机号是必须的' }, 400);
 
-	const user = await c.env.DB.prepare('SELECT id, public_address FROM Users WHERE phone_number = ?').bind(phone).first();
+    const phoneHash = await hashText(phone); // 使用哈希进行查找
+
+	const user = await c.env.DB.prepare('SELECT id, public_address FROM Users WHERE phone_hash = ?').bind(phoneHash).first();
 	if (!user) {
-		return c.json({ success: false, error: '用户未注册' }, 404);
+		return c.json({ success: false, error: '用户未注册或手机号错误' }, 404);
 	}
 	return c.json({ success: true, user });
 });
 
-// --- 钱包生成 API (模拟KYC) ---
+// --- 钱包生成 API (重大更新) ---
 app.post('/api/generate-wallet', async (c) => {
 	const { userId } = await c.req.json();
 	if (!userId) return c.json({ success: false, error: '用户ID是必须的' }, 400);
@@ -617,69 +625,68 @@ app.post('/api/generate-wallet', async (c) => {
 	try {
 		const wallet = ethers.Wallet.createRandom();
 		
-        // 【安全警告】在真实生产环境中，绝不能明文存储私钥！
-        // 应该使用KMS或Cloudflare Workers Secrets加密后存储。
+        // 使用我们的加密服务来加密私钥
+        const encryptedPrivateKey = await encrypt(wallet.privateKey, c.env);
+
 		await c.env.DB.prepare(
 			'UPDATE Users SET public_address = ?, encrypted_private_key = ? WHERE id = ?'
-		).bind(wallet.address, wallet.privateKey, userId).run();
+		).bind(wallet.address, encryptedPrivateKey, userId).run(); // 存储加密后的私钥
 
 		return c.json({ success: true, public_address: wallet.address });
-	} catch (e: any) {
-		return c.json({ success: false, error: e.message }, 500);
-	}
+	} catch (e: any) { return c.json({ success: false, error: e.message }, 500); }
 });
 
+// --- 【修正】获取所有帖子的API ---
 app.get('/api/posts', async (c) => {
 	try {
+		// [核心修正] 将 JOIN 修改为 LEFT JOIN
 		const { results } = await c.env.DB.prepare(
 			`SELECT 
-                p.id, 
-                p.content, 
-                p.is_nft, 
-                p.ipfs_cid, 
-                p.transaction_hash, 
-                p.created_at, 
-                u.phone_number as author_phone
+                p.id, p.content, p.is_nft, p.ipfs_cid, 
+                p.transaction_hash, p.created_at, 
+                u.phone_hash as author_identifier
 		    FROM Posts p 
-            JOIN Users u ON p.user_id = u.id
+            LEFT JOIN Users u ON p.user_id = u.id -- 使用 LEFT JOIN
 		    ORDER BY p.created_at DESC`
 		).all();
 
-		return c.json({ success: true, posts: results });
+		// [健壮性增强] 处理作者信息可能为NULL的情况
+		// 如果作者被删除，phone_hash会是null，我们给一个默认值
+		const postsWithAuthor = results.map(post => ({
+			...post,
+			author_identifier: post.author_identifier || 'unknown_author'
+		}));
+
+		return c.json({ success: true, posts: postsWithAuthor });
 	} catch (e: any) {
         console.error("获取帖子列表失败:", e);
         return c.json({ success: false, error: '服务器内部错误，无法获取帖子列表' }, 500);
     }
 });
 
+// --- 【修正】创建普通帖子的API ---
 app.post('/api/posts', async (c) => {
 	const { userId, content } = await c.req.json();
-
-	// 步骤 1: 输入验证
 	if (!userId || !content || typeof content !== 'string' || content.trim() === '') {
-		return c.json({ success: false, error: '用户ID和内容不能为空' }, 400);
+		return c.json({ success: false, error: '缺少用户ID或帖子内容无效' }, 400);
 	}
 
 	try {
-		// 步骤 2: 数据库插入操作
+		// [逻辑修正] .run() 是正确的做法，它只返回操作元信息，效率最高
 		const { success } = await c.env.DB.prepare(
 			'INSERT INTO Posts (user_id, content, is_nft) VALUES (?, ?, 0)'
 		).bind(userId, content.trim()).run();
 
-		// 步骤 3: 返回结果
 		if (success) {
-			// 201 Created 是表示资源成功创建的标准HTTP状态码
+			// [策略修正] 不再返回单个帖子，只返回一个明确的成功信号
+			// 强制前端去重新获取整个列表，保证数据绝对一致
 			return c.json({ success: true, message: '帖子发布成功' }, 201);
 		} else {
-			return c.json({ success: false, error: '发布帖子失败，请稍后再试' }, 500);
+			return c.json({ success: false, error: '数据库未能保存帖子' }, 500);
 		}
 	} catch (e: any) {
-        console.error("创建普通帖子失败:", e);
-        // 检查是否是外键约束错误，这通常意味着传入的 userId 在 Users 表中不存在
-        if (e.message && e.message.includes('FOREIGN KEY constraint failed')) {
-            return c.json({ success: false, error: '指定的用户不存在，无法发帖' }, 404);
-        }
-		return c.json({ success: false, error: '数据库操作失败' }, 500);
+		console.error("发布普通帖子失败:", e);
+		return c.json({ success: false, error: '数据库操作失败: ' + e.message }, 500);
 	}
 });
 
@@ -711,16 +718,22 @@ app.post('/api/mint', async (c) => {
         // gasPayerWallet 是交易的发送者 (msg.sender)
         // user.public_address 是NFT的所有者 (author)
 		const tx = await contract.mintPost(user.public_address, ipfsCid);
-		const receipt = await tx.wait(); // 等待交易上链
+		 const receipt = await tx.wait();
 
-		// 5. 将NFT帖子信息存入数据库
-		await c.env.DB.prepare(
+		// [逻辑修正] 同样，只执行插入操作
+		const { success } = await c.env.DB.prepare(
 			`INSERT INTO Posts (user_id, content, is_nft, ipfs_cid, transaction_hash)
 			 VALUES (?, ?, 1, ?, ?)`
-		).bind(userId, content, ipfsCid, receipt.hash).run();
+		).bind(userId, content.trim(), ipfsCid, receipt.hash).run();
 
-		return c.json({ success: true, transactionHash: receipt.hash });
-	} catch (e: any) {
+		if (success) {
+			// [策略修正] 只返回成功信号和交易哈希
+			return c.json({ success: true, transactionHash: receipt.hash });
+		} else {
+			console.error(`严重错误：用户 ${userId} 的交易 ${receipt.hash} 已上链，但未能写入数据库！`);
+			return c.json({ success: false, error: '交易已成功但数据保存失败，请联系管理员' }, 500);
+		}
+	} catch (e: any){
 		console.error("Minting error:", e);
 		return c.json({ success: false, error: '铸造过程中发生错误: ' + e.message }, 500);
 	}

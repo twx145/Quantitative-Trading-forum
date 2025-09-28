@@ -1,13 +1,11 @@
 import React from 'react';
 import { FiUser, FiInfo } from 'react-icons/fi';
+// 1. 导入我们的格式化函数
+import { formatUserId } from '../utils/formatters'; 
 
-interface User {
-  id: number;
-}
-
-interface SidebarProps {
-  user: User | null;
-}
+// User 和 SidebarProps interfaces 保持不变
+interface User { id: number; }
+interface SidebarProps { user: User | null; }
 
 const Sidebar: React.FC<SidebarProps> = ({ user }) => {
   return (
@@ -18,7 +16,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user }) => {
             <FiUser />
             <h3>我的信息</h3>
           </div>
-          <p><strong>用户ID:</strong> {user.id}</p>
+          {/* 2. 在这里使用格式化函数 */}
+          <p><strong>用户ID:</strong> #{formatUserId(user.id)}</p>
           <p><strong>身份:</strong> 社区成员</p>
         </div>
       )}

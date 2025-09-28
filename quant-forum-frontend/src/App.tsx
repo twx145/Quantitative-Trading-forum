@@ -2,56 +2,55 @@ import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import './App.css';
 
-// 导入所有需要的组件
+// 1. 导入我们创建的全局 Context Provider 和 hook
+import { SettingsProvider, useSettings } from './SettingsContext';
+
+// 2. 导入所有需要的组件、页面和统一的类型
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import LoginModal from './components/LoginModal';
-import KycModal from './components/KycModal'; // 引入新的KYC模态框
+import KycModal from './components/KycModal';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import AboutPage from './pages/AboutPage';
+import SettingsPage from './pages/SettingsPage'; // 确保导入了设置页面
+import { type User, type Post } from './types'; // 从 types.ts 导入
 
-
-
-// --- 配置项 ---
-// !! 确保这个地址是你部署的后端Worker地址 !!
+// --- 全局配置项 ---
 const API_BASE_URL = "https://quant-api-worker.TongWX5877.workers.dev";
-// 从环境变量中读取Pinata JWT
 const PINATA_JWT = import.meta.env.VITE_PINATA_JWT;
 
 
-// --- 更新数据类型以包含Web3字段 ---
-interface User {
-  id: number;
-  public_address: string | null; // 用户可能没有钱包地址
-}
+/**
+ * AppContent 组件
+ * 这个组件包含了应用的所有核心UI和业务逻辑。
+ * 它在 SettingsProvider 内部被渲染，因此可以安全地使用 useSettings hook。
+ */
+function AppContent() {
+  // 从全局 Context 中获取设置，用于动态应用主题和字体
+  const { settings } = useSettings();
 
-interface Post {
-  id: number;
-  content: string;
-  created_at: string;
-  author_phone: string;
-  is_nft: number; // 0 或 1
-  ipfs_cid: string | null;
-  transaction_hash: string | null;
-}
-
-
-function App() {
-  // --- State 管理 ---
+  // --- 所有应用级别的 State 都放在这里 ---
   const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
   const [isKycModalOpen, setKycModalOpen] = useState(false);
 
-  // --- 数据获取 ---
+  // --- 数据获取与业务逻辑函数 ---
+
+  // 从后端获取所有帖子
   const fetchPosts = async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/posts`);
+      if (!response.ok) throw new Error(`服务器错误: ${response.status}`);
       const data = await response.json();
-      setPosts(data.success ? data.posts : []);
+      if (data.success) {
+        setPosts([...data.posts]); // 使用新数组强制刷新
+      } else {
+        throw new Error(data.error || "获取帖子失败");
+      }
     } catch (error) {
       console.error("无法加载帖子:", error);
       alert("网络错误，无法加载帖子列表。");
@@ -60,122 +59,103 @@ function App() {
     }
   };
 
-  // --- Effects ---
+  // 在组件首次挂载时，从本地存储恢复用户并加载帖子
   useEffect(() => {
-    // 页面加载时，尝试从本地存储恢复用户信息并获取帖子
     const storedUser = localStorage.getItem('quant-forum-user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
     fetchPosts();
-  }, []);
+  }, []); // 空依赖数组确保只运行一次
 
-  // --- 事件处理函数 ---
+  // 登录成功后的回调
   const handleLoginSuccess = (loggedInUser: User) => {
     setUser(loggedInUser);
     localStorage.setItem('quant-forum-user', JSON.stringify(loggedInUser));
     setLoginModalOpen(false);
   };
 
+  // 登出
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('quant-forum-user');
   };
 
+  // 生成钱包后的回调
+  const handleWalletGenerated = (newAddress: string) => {
+    if (user) {
+      const updatedUser = { ...user, public_address: newAddress };
+      setUser(updatedUser);
+      localStorage.setItem('quant-forum-user', JSON.stringify(updatedUser));
+    }
+    setKycModalOpen(false);
+    alert('钱包已就绪！现在请重新点击“发布”来完成NFT的铸造。');
+  };
+
+  // 提交新帖子（普通或NFT）
   const handlePostSubmit = async (content: string, isNft: boolean) => {
     if (!user) return;
 
-    // 分支逻辑: 判断是发布普通帖子还是铸造NFT
-    if (isNft) {
-      // --- NFT 铸造流程 ---
-      // 1. 检查用户是否有钱包地址
-      if (!user.public_address) {
-        setKycModalOpen(true); // 如果没有，弹出KYC模态框让用户生成
-        return; // 中断发布流程
-      }
-
-      // 2. 如果有钱包，开始铸造
-      try {
-        // Step A: 上传内容到 Pinata (IPFS)
+    try {
+      if (isNft) {
+        // --- NFT 铸造流程 ---
+        if (!user.public_address) {
+          setKycModalOpen(true);
+          return;
+        }
+        
         const file = new Blob([content], { type: 'text/plain' });
         const formData = new FormData();
         formData.append('file', file, 'post.txt');
-
         const pinataRes = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${PINATA_JWT}` },
           body: formData,
         });
         const pinataData = await pinataRes.json();
-        if (!pinataData.IpfsHash) throw new Error('上传到IPFS失败，请检查Pinata密钥');
-
-        // Step B: 调用后端 /api/mint 接口进行铸造
+        if (!pinataData.IpfsHash) throw new Error('上传到IPFS失败');
+        
         const mintRes = await fetch(`${API_BASE_URL}/api/mint`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: user.id, content, ipfsCid: pinataData.IpfsHash }),
         });
         const mintData = await mintRes.json();
+        if (!mintData.success) throw new Error(mintData.error);
+        
+        alert(`铸造成功! 交易哈希: ${mintData.transactionHash}`);
 
-        if (mintData.success) {
-          alert(`铸造成功! 交易哈希: ${mintData.transactionHash}`);
-          await fetchPosts(); // 刷新帖子列表
-        } else {
-          throw new Error(mintData.error);
-        }
-      } catch (error: any) {
-        console.error("铸造失败:", error);
-        alert(`铸造失败: ${error.message}`);
-      }
-
-    } else {
-      // --- 普通帖子发布流程 ---
-      try {
+      } else {
+        // --- 普通帖子发布流程 ---
         const response = await fetch(`${API_BASE_URL}/api/posts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: user.id, content }),
         });
         const data = await response.json();
-        if (data.success) {
-          await fetchPosts(); // 成功后刷新列表
-        } else {
-          throw new Error(data.error);
-        }
-      } catch (error: any) {
-        console.error("发布帖子失败:", error);
-        alert('网络错误，无法发布: ' + error.message);
+        if (!data.success) throw new Error(data.error);
       }
+      
+      // [核心] 无论操作是否成功，都从服务器重新拉取最新列表，保证数据一致性
+      await fetchPosts();
+
+    } catch (error: any) {
+      console.error("提交失败:", error);
+      alert(`操作失败: ${error.message}`);
     }
   };
 
-  // 当KYC模态框成功生成钱包后被调用
-  const handleWalletGenerated = (newAddress: string) => {
-    if (user) {
-      // 更新前端的user state，添加新的钱包地址
-      const updatedUser = { ...user, public_address: newAddress };
-      setUser(updatedUser);
-      // 同时更新本地存储，以便刷新页面后状态依然存在
-      localStorage.setItem('quant-forum-user', JSON.stringify(updatedUser));
-    }
-    setKycModalOpen(false); // 关闭模态框
-    alert('钱包已就绪！现在请重新点击“发布”来完成NFT的铸造。');
-  };
-
-  // --- 渲染JSX ---
+  // --- 渲染UI ---
   return (
-    <div className="app">
-      {/* 导航栏现在是共享布局的一部分，始终显示 */}
+    // 将从Context获取的设置动态应用为CSS类名
+    <div className={`app theme-${settings.theme} font-size-${settings.fontSize}`}>
       <Navbar
         user={user}
         onLoginClick={() => setLoginModalOpen(true)}
         onLogoutClick={handleLogout}
       />
-
-      {/* 主内容区 */}
       <div className="app-container">
         <main className="main-content">
-          {/* Routes组件会根据URL匹配并渲染对应的Route */}
           <Routes>
             <Route
               path="/"
@@ -183,10 +163,10 @@ function App() {
             />
             <Route path="/profile" element={<ProfilePage user={user} />} />
             <Route path="/about" element={<AboutPage />} />
+            {/* [核心] 设置页面的路由，现在可以被正确渲染了 */}
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
-        
-        {/* 侧边栏也是共享布局的一部分 */}
         <Sidebar user={user} />
       </div>
 
@@ -207,6 +187,18 @@ function App() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * App 组件 (顶层)
+ * 它的唯一职责就是渲染 SettingsProvider，为整个应用提供全局设置。
+ */
+function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
+    </SettingsProvider>
   );
 }
 

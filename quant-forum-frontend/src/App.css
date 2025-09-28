@@ -339,3 +339,120 @@ textarea:focus, input[type="tel"]:focus {
   flex-grow: 1; /* 让按钮尽可能填充可用空间 */
   justify-content: center; /* 居中按钮内的图标和文字 */
 }
+
+/* --- 12. [新增] 全局字体大小和主题样式 --- */
+
+/* Font Size Classes */
+.font-size-small { font-size: 14px; }
+.font-size-medium { font-size: 16px; /* Default */ }
+.font-size-large { font-size: 18px; }
+
+/* Theme Classes */
+/* 'stars' is the default, so we don't need a specific class unless we want to override things */
+
+/* Light Theme */
+.theme-light body {
+  background-image: none; /* 移除星空背景 */
+  background-color: #f8f9fa;
+  color: #212529;
+  animation: none; /* 停止动画 */
+}
+.theme-light .card, .theme-light .navbar, .theme-light .modal-content {
+  background-color: #ffffff;
+  color: #212529;
+  border-color: #dee2e6;
+}
+.theme-light .button.button-outline { color: #0d6efd; border-color: #0d6efd; }
+.theme-light .button.button-outline:hover { background-color: #0d6efd; color: white; }
+.theme-light .text-secondary-color { color: #6c757d; }
+.theme-light .nav-icon-link { color: #6c757d; }
+.theme-light .nav-icon-link:hover { color: #212529; background-color: #e9ecef; }
+.theme-light .nav-icon-link.active { color: #0d6efd; }
+.theme-light .navbar-brand { color: #0d6efd; }
+.theme-light .user-id-display { color: #6c757d; }
+
+/* Dark Theme (a simpler, non-animated dark theme) */
+.theme-dark body {
+  background-image: none;
+  background-color: #0f172a; /* A solid dark blue */
+  color: #e2e8f0;
+  animation: none;
+}
+.theme-dark .card, .theme-dark .navbar, .theme-dark .modal-content {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+/* All other styles are inherited from the default 'stars' theme, which is already dark */
+
+
+/* --- 13. [新增] 设置页面样式 --- */
+.settings-page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.setting-section {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.setting-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.setting-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary-color);
+}
+.setting-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--text-color); /* Themed text color */
+}
+
+.setting-description {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-secondary-color);
+  font-size: 0.9rem;
+}
+
+.setting-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* --- 14. [新增] 自定义主题滚动条样式 --- */
+
+/* 针对 Firefox 浏览器 */
+html {
+  scrollbar-width: thin; /* "thin", "auto", "none" */
+  scrollbar-color: var(--primary-color) var(--surface-color); /* 滑块颜色 轨道颜色 */
+}
+
+/* 针对 WebKit 浏览器 (Chrome, Safari, Edge 等) */
+
+/* 1. 定义整个滚动条的宽度和轨道背景 */
+::-webkit-scrollbar {
+  width: 10px; /* 滚动条宽度 */
+  background-color: var(--surface-color); /* 轨道的颜色，与卡片背景色一致 */
+}
+
+/* 2. 定义滑块（可以拖动的那个部分）的样式 */
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-color); /* 默认状态下的滑块颜色，比较低调 */
+  border-radius: 10px; /* 圆角 */
+  border: 2px solid var(--surface-color); /* 在滑块周围创建一个与轨道同色的边框，产生“内嵌”效果 */
+}
+
+/* 3. [核心] 定义鼠标悬停在滑块上时的样式 */
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--primary-color); /* 鼠标悬停时，滑块点亮为主题粉色 */
+  box-shadow: 0 0 10px var(--glow-color); /* 添加与按钮一致的辉光效果 */
+}

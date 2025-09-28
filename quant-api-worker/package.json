@@ -1,0 +1,22 @@
+{
+	"name": "quant-api-worker",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy --remote",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"cf-typegen": "wrangler types"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"typescript": "^5.5.2",
+		"vitest": "~3.2.0",
+		"wrangler": "^4.40.2"
+	},
+	"dependencies": {
+		"ethers": "^6.15.0",
+		"hono": "^4.9.9"
+	}
+}

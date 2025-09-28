@@ -1,0 +1,341 @@
+/* === QuantForum CSS Design System v3.0 - Deep Space Parallax Theme === */
+
+/* --- 1. 设计系统基础：颜色、排版、全局设置 (保持不变) --- */
+:root {
+  --primary-color: #f471b5;         /* 亮粉色 - 主色 */
+  --primary-hover-color: #fb92c8;   /* 更亮的粉色 */
+  --background-color: #1a0f2a;      /* 午夜紫 - 背景底色 */
+  --nebula-glow-color: #3b0764;      /* 深邃的星云紫 */
+  --surface-color: #2a1b3d;         /* 卡片表面颜色 */
+  --glass-color: rgba(42, 27, 61, 0.7); /* 半透明玻璃色 */
+  --text-color: #e2e8f0;            /* 主文字 */
+  --text-secondary-color: #a19db5;  /* 次要文字 */
+  --border-color: #4a3f5a;          /* 边框颜色 */
+  --glow-color: rgba(244, 113, 181, 0.4); /* 辉光颜色 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--text-color);
+  overflow-x: hidden;
+  
+  /* --- 2. [核心升级] 多层渐变背景 --- */
+  background-color: var(--background-color);
+  background-image:
+    /* Layer 1: 小星星 (最远, 移动最慢) */
+    radial-gradient(1px 1px at 10% 30%, white, transparent),
+    radial-gradient(1px 1px at 80% 20%, white, transparent),
+    radial-gradient(1px 1px at 40% 90%, white, transparent),
+    radial-gradient(1px 1px at 70% 70%, white, transparent),
+    
+    /* Layer 2: 中星星 (中景, 中速移动) */
+    radial-gradient(2px 2px at 30% 50%, white, transparent),
+    radial-gradient(2px 2px at 90% 60%, white, transparent),
+    
+    /* Layer 3: 大星星 (近景, 移动最快) */
+    radial-gradient(3px 3px at 50% 80%, white, transparent),
+    
+    /* Layer 4: 星云光晕 (最底层视觉元素) */
+    radial-gradient(ellipse at center, var(--nebula-glow-color), transparent 70%);
+
+  background-repeat: repeat;
+  
+  /* 不同的size创造视差效果的关键 */
+  background-size:
+    600px 600px, /* 小星星层密度 */
+    600px 600px,
+    600px 600px,
+    600px 600px,
+    800px 800px, /* 中星星层密度 */
+    800px 800px,
+    1200px 1200px, /* 大星星层密度 */
+    100% 100%; /* 星云层铺满 */
+
+  /* 动画 */
+  animation: move-stars 150s linear infinite;
+}
+
+.main-content {
+  display: flex;          /* 启用 Flexbox 布局 */
+  flex-direction: column; /* 让子元素垂直排列 */
+  gap: 1.2rem;            /* 在子元素之间创建 1.5rem 的间距 */
+}
+
+@keyframes move-stars {
+    from { background-position: 0 0; }
+    to { background-position: -10000px 5000px; }
+}
+
+/* --- 3. 核心布局 (保持不变) --- */
+.app {
+  position: relative;
+  z-index: 1;
+  margin: 0; 
+  padding: 0; 
+}
+.app-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+@media (min-width: 992px) {
+  .app-container { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+}
+
+/* --- 4. 组件: 导航栏 (Glassmorphism) --- */
+.navbar {
+  width: 100%;
+  background-color: var(--glass-color);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid var(--border-color);
+}
+.navbar-container { max-width: 100%;  margin: 0 auto; padding: 0 1.5rem; height: 64px; display: flex; justify-content: space-between; align-items: center; }
+.navbar-brand { display: flex; align-items: center; gap: 0.75rem; color: var(--primary-color); text-decoration: none; }
+.navbar-brand h1 { font-size: 1.5rem; margin: 0; }
+.navbar-brand:hover {opacity: 0.85;transition: opacity 0.2s ease-in-out; }
+.navbar-user { display: flex; align-items: center; gap: 1rem; }
+.user-id-display { font-weight: 500; color: var(--text-secondary-color); }
+
+/* --- 5. 组件: 卡片 (Card) --- */
+.card {
+  /* [核心修改] 使用RGBA设置半透明背景 */
+  background-color: rgba(30, 41, 59, 0.3);
+  backdrop-filter: blur(1px);
+
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.card:hover {
+  background-color: rgba(30, 41, 59, 0.5); /* 75% 不透明度 (比默认状态更实) */
+  
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-color);
+}
+
+/* --- 6. 组件: 按钮 (Button) --- */
+.button {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 10px 18px;
+  font-size: 0.95rem; font-weight: 600; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--primary-color);
+  background-color: var(--primary-color);
+  color: #0f172a; /* 深色文字，对比强烈 */
+  transition: all 0.2s ease-in-out;
+}
+.button:hover:not(:disabled) {
+  background-color: var(--primary-hover-color);
+  border-color: var(--primary-hover-color);
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px var(--glow-color); /* 核心辉光效果 */
+}
+.button:disabled { background-color: #334155; color: var(--text-secondary-color); border-color: #334155; cursor: not-allowed; }
+.button.button-outline { background-color: transparent; color: var(--primary-color); }
+.button.button-outline:hover:not(:disabled) { background-color: var(--primary-color); color: #0f172a; }
+
+/* --- 7. 组件: 表单 (Forms & Inputs) --- */
+.post-form-card { padding: 1.5rem; }
+textarea, input[type="tel"] {
+  width: 100%; padding: 12px; font-size: 1rem; border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: all 0.2s ease;
+}
+textarea:focus, input[type="tel"]:focus {
+  outline: none; border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+.post-form-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+
+/* [新增] NFT复选框美化 */
+.nft-checkbox {
+  display: flex; align-items: center; gap: 0.5rem;
+  color: var(--text-secondary-color); font-size: 0.9rem;
+  cursor: pointer; position: relative;
+}
+.nft-checkbox input[type="checkbox"] { display: none; }
+.nft-checkbox .checkbox-visual {
+  width: 18px; height: 18px; border: 2px solid var(--border-color);
+  border-radius: 4px; display: inline-block; transition: all 0.2s ease;
+}
+.nft-checkbox input:checked + .checkbox-visual {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+}
+
+/* --- 8. 组件: 帖子卡片 (PostCard) & NFT徽章 --- */
+.post-card-content { line-height: 1.7; color: var(--text-color); }
+.post-card-author { color: var(--text-color); }
+.post-card-date { font-size: 0.85rem; color: var(--text-secondary-color); }
+.post-card-header { position: relative; display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+.post-card-avatar { width: 40px; height: 40px; border-radius: 50%; background-color: var(--primary-color); color: #0f172a; display: flex; justify-content: center; align-items: center; font-weight: bold; }
+.post-card-author-info { display: flex; flex-direction: column; }
+
+/* [新增] NFT徽章精修 */
+.nft-badge {
+  position: absolute; top: -1.5rem; right: -1.5rem;
+  background: linear-gradient(45deg, var(--primary-color), #a855f7);
+  color: white; padding: 6px 12px;
+  border-bottom-left-radius: 8px;
+  font-size: 0.8rem; font-weight: 600;
+  display: flex; align-items: center; gap: 0.3rem;
+  box-shadow: var(--shadow-md);
+}
+
+.post-card-nft-footer {
+  margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);
+  display: flex; align-items: center; gap: 1rem; font-size: 0.85rem;
+}
+.post-card-nft-footer a { color: var(--primary-color); text-decoration: none; transition: color 0.2s ease; }
+.post-card-nft-footer a:hover { color: var(--primary-hover-color); }
+.post-card-nft-footer span { color: var(--text-secondary-color); }
+
+
+/* --- 9. 组件: 模态框 (Modal - Glassmorphism) & Spinner --- */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(8px);
+  display: flex; justify-content: center; align-items: center; z-index: 1000;
+}
+.modal-content {
+  background: var(--surface-color); padding: 2rem; border-radius: 8px;
+  width: 100%; max-width: 420px; position: relative;
+  border: 1px solid var(--border-color); box-shadow: var(--shadow-md);
+}
+.modal-close-button { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary-color); transition: color 0.2s ease; }
+.modal-close-button:hover { color: var(--text-color); }
+
+.modal-tabs {
+  display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem;
+}
+.modal-tabs button {
+  flex: 1; padding: 1rem; border: none; background: none; color: var(--text-secondary-color);
+  cursor: pointer; font-size: 1rem; transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+.modal-tabs button.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+.modal-title { margin-top: 0; margin-bottom: 1.5rem; color: var(--text-color); }
+
+.spinner-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(30, 41, 59, 0.8); display: flex; justify-content: center; align-items: center; }
+.spinner { border: 4px solid var(--border-color); width: 36px; height: 36px; border-radius: 50%; border-left-color: var(--primary-color); animation: spin 1s ease infinite; }
+
+/* --- 10. [新增] 导航栏图标链接 --- */
+.nav-icon-link {
+  color: var(--text-secondary-color);
+  text-decoration: none;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative; /* 为了 tooltip 定位 */
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.nav-icon-link:hover {
+  color: var(--text-color);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* NavLink 的 active 状态 */
+.nav-icon-link.active {
+  color: var(--primary-color);
+}
+
+/* 简单的 tooltip 效果 */
+.nav-icon-link .tooltip-text {
+  visibility: hidden;
+  width: 80px;
+  background-color: #0f172a;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: -35px; /* 定位在图标下方 */
+  left: 50%;
+  margin-left: -40px; /* 居中 */
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.nav-icon-link:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* --- 11. [新增] "关于"页面的布局和下载区域样式 --- */
+
+/* 为"关于"页面创建一个容器，让卡片之间有间距 */
+.about-page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem; /* 卡片之间的垂直间距 */
+}
+
+/* 下载卡片的特殊样式，让它更醒目 */
+.download-card {
+  /* 使用你的主题色作为边框的辉光效果 */
+  box-shadow: 0 0 20px -5px var(--glow-color);
+  border-color: var(--primary-color);
+}
+
+/* 下载区域的核心网格布局 */
+.download-section-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* 在手机上，Logo在上，文字在下 */
+  align-items: center;
+  gap: 2rem;
+}
+
+/* 在平板及以上尺寸的屏幕上，变为左右两栏布局 */
+@media (min-width: 768px) {
+  .download-section-grid {
+    grid-template-columns: 150px 1fr; /* 左侧Logo固定宽度，右侧自适应 */
+  }
+}
+
+.download-logo-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.download-app-logo {
+  width: 150px;
+  height: 150px;
+  object-fit: contain; /* 确保Logo比例正确 */
+  border-radius: 24px; /* 轻微的圆角，让Logo看起来更柔和 */
+}
+
+.download-buttons-group {
+  display: flex;
+  flex-wrap: wrap; /* 在小屏幕上允许按钮换行 */
+  gap: 1rem;
+}
+
+.download-button {
+  flex-grow: 1; /* 让按钮尽可能填充可用空间 */
+  justify-content: center; /* 居中按钮内的图标和文字 */
+}

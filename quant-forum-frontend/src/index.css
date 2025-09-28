@@ -1,0 +1,33 @@
+/* 
+  这个文件只用于定义最基础的全局样式重置，
+  移除所有Vite模板中不必要的布局和间距。
+*/
+
+:root {
+  /* 定义全局字体，与 App.css 保持一致 */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* 字体渲染优化 */
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 
+  [核心修正]
+  重置 body 和 #root 的样式，移除所有不必要的布局和间距，
+  确保我们的应用可以从页面的左上角开始渲染。
+*/
+body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  /* 这里的背景色会作为我们动态星空背景的底色 */
+  background-color: #0f172a;
+}

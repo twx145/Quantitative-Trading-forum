@@ -1,0 +1,28 @@
+{
+  // 主应用名称
+  "name": "quant-api-worker",
+  // Worker 的入口文件
+  "main": "src/index.ts",
+  // 兼容性日期
+  "compatibility_date": "2023-11-22",
+
+  // --- 数据库绑定 (保持不变) ---
+  // 这个部分将你的D1数据库 "quant-forum-db" 绑定到Worker中的 "DB" 变量上。
+  "d1_databases": [
+    {
+      "binding": "DB", // 在代码中用 c.env.DB 访问
+      "database_name": "quant-forum-db",
+      "database_id": "a6d1e549-40cd-40e9-b1ff-536cc9486e21" // 请确保这里是你的正确ID，保持不变
+    }
+  ],
+
+  // --- 【新增部分】环境变量 ---
+  // 用于存储非敏感的配置信息，Worker代码中可以通过 c.env.KEY 的方式访问。
+  "vars": {
+    // 文昌链EVM模块的网关节点地址
+    "RPC_URL": "https://opbningxia.bsngate.com:18602/api/0d74beb272d04b46aa9b628cabe9ba46/evmrpc",
+    
+    // 你部署在文昌链上的智能合约地址
+    "CONTRACT_ADDRESS": "0x61e658AD78E41Ad468FCe8ba7D6b6541AE9EA328"
+  }
+}
